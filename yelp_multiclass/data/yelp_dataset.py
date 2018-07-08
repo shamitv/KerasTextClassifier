@@ -1,4 +1,5 @@
 import numpy as np
+from yelp_multiclass.data.config import getDataFile
 
 def _remove_long_seq(maxlen, seq, label):
     """Removes sequences that exceed the maximum length.
@@ -18,7 +19,7 @@ def _remove_long_seq(maxlen, seq, label):
             new_label.append(y)
     return new_seq, new_label
 
-def load_data(path='yelp.npz', num_words=None, skip_top=0,
+def load_data(path=getDataFile(), num_words=None, skip_top=0,
               maxlen=None, seed=113,
               start_char=1, oov_char=2, index_from=3, **kwargs):
     """Loads the Yelp dataset.
@@ -94,3 +95,27 @@ def load_data(path='yelp.npz', num_words=None, skip_top=0,
     x_test, y_test = np.array(xs[idx:]), np.array(labels[idx:])
 
     return (x_train, y_train), (x_test, y_test)
+
+
+def filter_for_binary_classification(x_train, y_train,x_test, y_test):
+    (x_train, y_train) = flatten_for_binary(x_train, y_train)
+    (x_test, y_test) = flatten_for_binary(x_test, y_test)
+
+    return (x_train, y_train), (x_test, y_test)
+
+
+def flatten_for_binary(x,y):
+    x_ret = []
+    y_ret = []
+
+    for idx, yval in enumerate(y):
+        if (yval[0] or yval[4]):
+            x_ret.append(x[idx])
+            if (yval[0]):
+                y_ret.append(0)
+            else:
+                y_ret.append(1)
+
+    x_ret = np.array(x_ret)
+    y_ret = np.array(y_ret)
+    return (x_ret,y_ret)
