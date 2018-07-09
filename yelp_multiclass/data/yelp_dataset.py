@@ -1,5 +1,6 @@
 import numpy as np
-from yelp_multiclass.data.config import getDataFile
+from yelp_multiclass.data.config import getDataFile, getJsonFile
+import json
 
 def _remove_long_seq(maxlen, seq, label):
     """Removes sequences that exceed the maximum length.
@@ -55,12 +56,14 @@ def load_data(path=getDataFile(), num_words=None, skip_top=0,
     with np.load(path) as f:
         x_train, labels_train = f['x_train'], f['y_train']
         x_test, labels_test = f['x_test'], f['y_test']
+
+    #print(x_train[0])
     np.random.seed(seed)
     indices = np.arange(len(x_train))
     np.random.shuffle(indices)
     x_train = x_train[indices]
     labels_train = labels_train[indices]
-
+    #print(x_train[0])
     indices = np.arange(len(x_test))
     np.random.shuffle(indices)
     x_test = x_test[indices]
@@ -73,6 +76,7 @@ def load_data(path=getDataFile(), num_words=None, skip_top=0,
     elif index_from:
         xs = [[w + index_from for w in x] for x in xs]
 
+    #print(xs[0])
     if maxlen:
         xs, labels = _remove_long_seq(maxlen, xs, labels)
         if not xs:
@@ -119,3 +123,13 @@ def flatten_for_binary(x,y):
     x_ret = np.array(x_ret)
     y_ret = np.array(y_ret)
     return (x_ret,y_ret)
+
+def load_word_indices():
+    with open(getJsonFile(), 'r', encoding="utf-8") as fp:
+        word_idx = json.load(fp)
+    for w in word_idx:
+        word_idx[w]=word_idx[w]+2
+    word_idx[":PAD:"] = 0
+    word_idx[":START:"] = 1
+    word_idx[":UNK:"] = 2
+    return word_idx;

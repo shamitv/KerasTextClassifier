@@ -27,5 +27,8 @@ def createNumericSent(x,word_idx):
         if(t in word_idx.keys()):
             ret.append(word_idx[t])
         else:
-            ret.append(-1)
+            # by convention, use 2 as OOV word
+            # reserve 'index_from' (=3 by default) characters:
+            # 0 (padding), 1 (start), 2 (OOV)
+            ret.append(2)
     return ret;
