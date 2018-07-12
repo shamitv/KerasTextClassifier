@@ -38,7 +38,7 @@ LOG_PATH= getLogDir()
 (X_train, y_train), (X_test, y_test) = load_data(num_words=NUM_WORDS, index_from=INDEX_FROM)
 #(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=NUM_WORDS, index_from=INDEX_FROM)
 
-(X_train, y_train), (X_test, y_test)= filter_for_binary_classification(X_train, y_train,X_test, y_test)
+#(X_train, y_train), (X_test, y_test)= filter_for_binary_classification(X_train, y_train,X_test, y_test)
 
 # Sequences pre-processing
 vocabulary_size = get_vocabulary_size(X_train)
@@ -78,6 +78,7 @@ with tf.name_scope('Fully_connected_layer'):
     b = tf.Variable(tf.constant(0., shape=[1]))
     y_hat = tf.nn.xw_plus_b(drop, W, b)
     y_hat = tf.squeeze(y_hat)
+
     tf.summary.histogram('W', W)
 
 with tf.name_scope('Metrics'):
