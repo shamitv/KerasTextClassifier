@@ -13,8 +13,9 @@ import tensorflow as tf
 from tensorflow.contrib.rnn import GRUCell
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as bi_rnn
 from tqdm import tqdm
+from pathlib import Path
 
-from yelp_multiclass.data.config import getModelDir, getLogDir
+from yelp_multiclass.data.config import getModelDir, getLogDir, getProcessedDataFile
 from yelp_multiclass.data.yelp_dataset import load_data, filter_for_binary_classification
 from yelp_sentiment_attention.attention import attention
 from yelp_sentiment_attention.utils import get_vocabulary_size, fit_in_vocabulary, zero_pad, batch_generator
@@ -35,11 +36,17 @@ DELTA = 0.5
 MODEL_PATH = getModelDir()
 LOG_PATH= getLogDir()
 # Load the data set
-(X_train, y_train), (X_test, y_test) = load_data(num_words=NUM_WORDS, index_from=INDEX_FROM)
-#(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=NUM_WORDS, index_from=INDEX_FROM)
 
-#(X_train, y_train), (X_test, y_test)= filter_for_binary_classification(X_train, y_train,X_test, y_test)
-
+processed_file=getProcessedDataFile()
+processed_file_path = Path(processed_file)
+if not processed_file_path.is_file():
+    (X_train, y_train), (X_test, y_test) = load_data(num_words=NUM_WORDS, index_from=INDEX_FROM)
+    npz_dict = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test}
+    np.savez(processed_file_path, **npz_dict)
+else:
+    with np.load(processed_file_path) as f:
+        X_train, y_train = f['X_train'], f['y_train']
+        X_test, y_test = f['X_test'], f['y_test']
 # Sequences pre-processing
 vocabulary_size = get_vocabulary_size(X_train)
 X_test = fit_in_vocabulary(X_test, vocabulary_size)
