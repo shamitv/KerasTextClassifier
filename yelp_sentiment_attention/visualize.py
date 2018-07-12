@@ -16,41 +16,43 @@ saver = tf.train.Saver()
 with tf.Session() as sess:
     saver.restore(sess, MODEL_PATH)
 
-    x_batch_test, y_batch_test = X_test[:1], y_test[:1]
+    x_batch_test, y_batch_test = X_test[:550], y_test[:550]
     seq_len_test = np.array([list(x).index(0) + 1 for x in x_batch_test])
-    alphas_test = sess.run([alphas], feed_dict={batch_ph: x_batch_test, target_ph: y_batch_test,
+    results = sess.run([alphas,y_hat], feed_dict={batch_ph: x_batch_test, target_ph: y_batch_test,
                                                 seq_len_ph: seq_len_test, keep_prob_ph: 1.0})
-alphas_values = alphas_test[0][0]
+alphas_values = results[0][0]
 
-# Build correct mapping from word to index and inverse
-'''
-word_index = imdb.get_word_index()
-word_index = {word: index + INDEX_FROM for word, index in word_index.items()}
-word_index[":PAD:"] = 0
-word_index[":START:"] = 1
-word_index[":UNK:"] = 2
-index_word = {value: key for key, value in word_index.items()}
-# Represent the sample by words rather than indices
-'''
 
 word_index = load_word_indices()
 index_word = buildIndexToWordDict(word_index)
-sample = [x-1 for x in x_batch_test[0]]
-sample[0] = 1
-words = list(map(index_word.get, sample))
+
+
+
 
 #textSent = createTextSent(x_batch_test[0]);
 #words=tokenizeText(textSent);
 
 # Save visualization as HTML
 with open("visualization.html", "w") as html_file:
-    for word, alpha in zip(words, alphas_values / alphas_values.max()):
-        if word == ":START:":
-            continue
-        elif word == ":PAD:":
-            break
-        html_file.write('<font style="background: rgba(255, 255, 0, %f)">%s</font>\n' % (alpha, word))
-
+    for X,alpha_values,Y_hat,Y in zip(x_batch_test,results[0],results[1],y_batch_test ) :
+        html_file.write("<br/><hr/>");
+        sample = [x - 1 for x in X]
+        sample[0] = 1
+        sample=[0 if x == -1 else x for x in sample]
+        words = list(map(index_word.get, sample))
+        html_file.write('%s  %s\n' % (Y, Y_hat));
+        if Y_hat > 0:
+            div_color='#b8efc8'
+        else:
+            div_color = '#ff848a'
+        html_file.write('<div style="background-color:%s">\n' % div_color);
+        for word, alpha in zip(words, alphas_values / alphas_values.max()):
+            if word == ":START:":
+                continue
+            elif word == ":PAD:":
+                break
+            html_file.write('<font style="background: rgba(255, 255, 0, %f)">%s</font>\n' % (alpha, word))
+        html_file.write('</div>\n');
 print('Working director is ' +  os.getcwd())
 
 print('\nOpen visualization.html to checkout the attention coefficients visualization.')
