@@ -19,6 +19,7 @@ from yelp_multiclass.data.config import getModelDir, getLogDir, getProcessedData
 from yelp_multiclass.data.yelp_dataset import load_data, filter_for_binary_classification
 from yelp_sentiment_attention.attention import attention
 from yelp_sentiment_attention.utils import get_vocabulary_size, fit_in_vocabulary, zero_pad, batch_generator
+from yelp_sentiment_attention.log import log
 from yelp_multiclass.data.config import getModelFile
 
 from keras.datasets import imdb
@@ -39,19 +40,31 @@ LOG_PATH= getLogDir()
 
 processed_file=getProcessedDataFile()
 processed_file_path = Path(processed_file)
+log.info("Looking for data :: "+processed_file)
 if not processed_file_path.is_file():
+    log.info("Processed data not available fetching from source")
     (X_train, y_train), (X_test, y_test) = load_data(num_words=NUM_WORDS, index_from=INDEX_FROM)
-    npz_dict = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test}
+    log.info("Pre-processing")
+    # Sequences pre-processing
+    vocabulary_size = get_vocabulary_size(X_train)
+    X_test = fit_in_vocabulary(X_test, vocabulary_size)
+    X_train = zero_pad(X_train, SEQUENCE_LENGTH)
+    X_test = zero_pad(X_test, SEQUENCE_LENGTH)
+    log.info("Pre-processing done")
+    npz_dict = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train,
+                'y_test': y_test, 'vocabulary_size':vocabulary_size}
     np.savez(processed_file_path, **npz_dict)
+    log.info("Saved data in cache")
 else:
+    log.info("Loading data from cache")
     with np.load(processed_file_path) as f:
         X_train, y_train = f['X_train'], f['y_train']
         X_test, y_test = f['X_test'], f['y_test']
-# Sequences pre-processing
-vocabulary_size = get_vocabulary_size(X_train)
-X_test = fit_in_vocabulary(X_test, vocabulary_size)
-X_train = zero_pad(X_train, SEQUENCE_LENGTH)
-X_test = zero_pad(X_test, SEQUENCE_LENGTH)
+        vocabulary_size = f['vocabulary_size']
+    log.info("Loaded data in cache")
+
+
+
 
 # Different placeholders
 with tf.name_scope('Inputs'):
@@ -114,8 +127,8 @@ saver = tf.train.Saver()
 if __name__ == "__main__":
     with tf.Session(config=session_conf) as sess:
         sess.run(tf.global_variables_initializer())
-        print("Start learning...")
-        print("Run 'tensorboard --logdir="+LOG_PATH+"' to checkout tensorboard logs.")
+        log.info("Start learning...")
+        log.info("Run 'tensorboard --logdir="+LOG_PATH+"' to checkout tensorboard logs.")
         for epoch in range(NUM_EPOCHS):
             loss_train = 0
             loss_test = 0
@@ -128,6 +141,7 @@ if __name__ == "__main__":
             num_batches = X_train.shape[0] // BATCH_SIZE
             for b in tqdm(range(num_batches)):
                 x_batch, y_batch = next(train_batch_generator)
+
                 seq_len = np.array([list(x).index(0) + 1 for x in x_batch])  # actual lengths of sequences
                 loss_tr, acc, _, summary = sess.run([loss, accuracy, optimizer, merged],
                                                     feed_dict={batch_ph: x_batch,
